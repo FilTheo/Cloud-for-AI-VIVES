@@ -1,1 +1,0 @@
-# super-cool-new-ts-package

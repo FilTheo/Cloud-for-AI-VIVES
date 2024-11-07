@@ -1,1 +1,0 @@
-"""Trying to organize the structure of the package"""
