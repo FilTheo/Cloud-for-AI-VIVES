@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Forecast Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='static.css') }}">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header-container">
+            <div class="client-info">
+                <span>Logged in as: {{ client }}</span>
+                <a href="{{ url_for('logout') }}" class="logout-button">Logout</a>
+            </div>
+        </div>
+        <div id="loadingOverlay" class="loading-overlay">
+            <div class="loading-content">
+                <p>Generating forecasts...</p>
+                <div class="spinner"></div>
+            </div>
+        </div>
+        <div id="mergingOverlay" class="loading-overlay">
+            <div class="loading-content">
+                <p>Merging New Files...</p>
+                <div class="spinner"></div>
+            </div>
+        </div>
+        <div class="upload-container">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <input type="file" name="file" id="file" class="file-input" accept=".csv,.xlsx" style="display: none;">
+                <button type="button" id="uploadButton" class="upload-button">Upload Files</button>
+            </form>
+            <button id="forecastButton" class="forecast-button">New Forecasts</button>
+            <button id="updateDataButton" class="update-data-button">Update Data</button>
+            <button id="downloadButton" class="download-button">Download</button>
+        </div>
+
+        <h1>Forecast Dashboard</h1>
+
+        {% if predictions %}
+        <h2>Forecast Results</h2>
+        <div class="table-slider">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Unique ID</th>
+                        {% set first_prediction = predictions.values()|first %}
+                        {% for date in first_prediction %}
+                        <th colspan="4">{{ date }}</th>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <th></th>
+                        {% for date in first_prediction %}
+                        <th class="model-header">SeasonXpert</th>
+                        <th class="model-header">Benchmark</th>
+                        <th class="model-header">Confirmed</th>
+                        <th class="model-header">True</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for key, dates in predictions.items() %}
+                    {% set row_color = dates.values()|map(attribute='Color')|first %}
+                    <tr class="{{ row_color }}-row">
+                        <td>{{ key }}</td>
+                        {% for date, date_data in dates.items() %}
+                        {% set has_confirmed = date_data['Confirmed'] is not none and date_data['Confirmed'] != '' %}
+                        <td>{{ date_data['SeasonXpert'] if date_data['SeasonXpert'] is not none else '' }}</td>
+                        <td>{{ date_data['SeasonalNaive'] if date_data['SeasonalNaive'] is not none else '' }}</td>
+                        <td class="{% if has_confirmed %}confirmed-date{% endif %}">{{ date_data['Confirmed'] if
+                            date_data['Confirmed'] is not none else '' }}</td>
+                        <td>{{ date_data['True'] if date_data['True'] is not none else '' }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if plots %}
+        <div class="plots-container">
+            <div class="tabs">
+                {% for plot_name in plots.keys() %}
+                <button class="tab-button" onclick="showPlot('{{ plot_name }}')">{{ plot_name }}</button>
+                {% endfor %}
+            </div>
+            <div class="plot-display">
+                {% for plot_name, plot_html in plots.items() %}
+                <div id="{{ plot_name }}" class="plot" style="width:100%; height:600px;">
+                    {{ plot_html | safe }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <p class="no-plots">No plots available. Generate new forecasts to create plots.</p>
+        {% endif %}
+
+        <div id="optimizePopup" class="popup">
+            <div class="popup-content">
+                <h2>Optimize Model</h2>
+                <p>In the future, this window will include parameters for model optimization, such as:</p>
+                <ul>
+                    <li>Loss functions to test</li>
+                    <li>Covariate combinations</li>
+                    <li>Seasonal features</li>
+                    <li>Lag structures</li>
+                    <li>Number of trials for each optimization step</li>
+                </ul>
+                <p>Model optimization functionality will be implemented soon.</p>
+                <button onclick="closeOptimizePopup()">Close</button>
+            </div>
+        </div>
+        {% else %}
+        <p class="no-predictions">No forecasts available. Click "New Forecasts" to generate predictions.</p>
+        {% endif %}
+
+        <!-- Add this just before the closing </div> of the container -->
+        <div id="uploadPopup" class="popup">
+            <div class="popup-content">
+                <h2 id="uploadStatus">Uploading File...</h2>
+                <p id="uploadMessage"></p>
+                <div id="uploadSpinner" class="spinner"></div>
+                <button id="uploadCloseButton" onclick="closeUploadPopup()" style="display: none;">OK</button>
+            </div>
+        </div>
+        <div id="fullErrorMessage"
+            style="display: none; white-space: pre-wrap; word-wrap: break-word; background-color: #f8f8f8; border: 1px solid #ddd; padding: 10px; margin-top: 20px; max-height: 300px; overflow-y: auto;">
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const firstPlot = document.querySelector('.plot');
+            const firstTab = document.querySelector('.tab-button');
+            if (firstPlot && firstTab) {
+                firstPlot.style.display = 'block';
+                firstTab.classList.add('active');
+            }
+        });
+
+        function showPlot(plotId) {
+            const plots = document.querySelectorAll('.plot');
+            plots.forEach(function (plot) {
+                plot.style.display = 'none';
+            });
+            document.getElementById(plotId).style.display = 'block';
+
+            const tabs = document.querySelectorAll('.tab-button');
+            tabs.forEach(function (tab) {
+                tab.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            // Trigger a window resize event to make sure the plot is properly rendered
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        function showOptimizePopup() {
+            document.getElementById('optimizePopup').style.display = 'block';
+        }
+
+        function closeOptimizePopup() {
+            document.getElementById('optimizePopup').style.display = 'none';
+        }
+
+        document.getElementById('forecastButton').addEventListener('click', function (e) {
+            e.preventDefault();
+            const button = this;
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const fullErrorMessage = document.getElementById('fullErrorMessage');
+
+            button.disabled = true;
+            button.textContent = 'Generating...';
+            loadingOverlay.style.display = 'flex';
+
+            fetch("{{ url_for('run_forecast') }}", {
+                method: 'POST'
+            }).then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        throw new Error(data.message || 'Forecast generation failed');
+                    }
+                }).catch(error => {
+                    console.error('Error:', error);
+                    fullErrorMessage.textContent = error.message;
+                    fullErrorMessage.style.display = 'block';
+                }).finally(() => {
+                    button.disabled = false;
+                    button.textContent = 'New Forecasts';
+                    loadingOverlay.style.display = 'none';
+                });
+        });
+
+        document.getElementById('uploadButton').addEventListener('click', function (e) {
+            e.preventDefault();
+            document.getElementById('file').click();
+        });
+
+        document.getElementById('file').addEventListener('change', function (e) {
+            if (this.files.length > 0) {
+                const file = this.files[0];
+                const formData = new FormData();
+                formData.append('file', file);
+
+                showUploadPopup();
+
+                fetch("{{ url_for('upload_file') }}", {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showUploadSuccess(data.message);
+                        } else {
+                            throw new Error(data.message || 'Upload failed');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showUploadError(error.message);
+                    });
+            }
+        });
+
+        function showUploadPopup() {
+            document.getElementById('uploadPopup').style.display = 'block';
+            document.getElementById('uploadStatus').textContent = 'Uploading File...';
+            document.getElementById('uploadMessage').textContent = '';
+            document.getElementById('uploadSpinner').style.display = 'block';
+            document.getElementById('uploadCloseButton').style.display = 'none';
+        }
+
+        function showUploadSuccess(message) {
+            document.getElementById('uploadStatus').textContent = 'Upload Successful';
+            document.getElementById('uploadMessage').textContent = message;
+            document.getElementById('uploadSpinner').style.display = 'none';
+            document.getElementById('uploadCloseButton').style.display = 'block';
+        }
+
+        function showUploadError(message) {
+            document.getElementById('uploadStatus').textContent = 'Upload Failed';
+            document.getElementById('uploadMessage').textContent = message;
+            document.getElementById('uploadSpinner').style.display = 'none';
+            document.getElementById('uploadCloseButton').style.display = 'block';
+        }
+
+        function closeUploadPopup() {
+            document.getElementById('uploadPopup').style.display = 'none';
+        }
+
+        document.getElementById('updateDataButton').addEventListener('click', function (e) {
+            e.preventDefault();
+            const button = this;
+            const mergingOverlay = document.getElementById('mergingOverlay');
+            const fullErrorMessage = document.getElementById('fullErrorMessage');
+
+            button.disabled = true;
+            button.textContent = 'Merging...';
+            mergingOverlay.style.display = 'flex';
+
+            fetch("{{ url_for('update_data') }}", {
+
+                method: 'POST'
+            }).then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMergeSuccess(data.message);
+                    } else {
+                        throw new Error(data.message || 'Data update failed');
+                    }
+                }).catch(error => {
+                    console.error('Error:', error);
+                    showMergeError(error.message);
+                }).finally(() => {
+                    button.disabled = false;
+                    button.textContent = 'Update Data';
+                    mergingOverlay.style.display = 'none';
+                });
+        });
+
+        function showMergeSuccess(message) {
+            document.getElementById('uploadPopup').style.display = 'block';
+            document.getElementById('uploadStatus').textContent = 'Merge Successful';
+            document.getElementById('uploadMessage').textContent = message;
+            document.getElementById('uploadSpinner').style.display = 'none';
+            document.getElementById('uploadCloseButton').style.display = 'block';
+        }
+
+        function showMergeError(message) {
+            document.getElementById('uploadPopup').style.display = 'block';
+            document.getElementById('uploadStatus').textContent = 'Merge Failed';
+            document.getElementById('uploadMessage').textContent = message;
+            document.getElementById('uploadSpinner').style.display = 'none';
+            document.getElementById('uploadCloseButton').style.display = 'block';
+        }
+
+        document.getElementById('downloadButton').addEventListener('click', function (e) {
+            e.preventDefault();
+            fetch("{{ url_for('download_orders') }}", {
+                method: 'POST'
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'orders.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Download failed: ' + error.message);
+                });
+        });
+    </script>
+</body>
+
+</html>

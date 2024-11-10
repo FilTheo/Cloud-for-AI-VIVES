@@ -1,0 +1,310 @@
+import numpy as np
+
+# a small epsilon to avoid divisions with zero
+# todo: check statistical correctness
+e = np.finfo(np.float64).eps
+
+
+def mean_squared_error(actual, predicted, squared=True):
+    """
+    Calculates the mean squared error between actual and predicted values.
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+        squared (bool): Whether to square the error. Default: True.
+
+    Returns:
+        np.array: The mean squared error.
+
+    """
+    squared_error = np.square(simple_error(actual, predicted))
+
+    if squared:
+        return np.nanmean(squared_error)
+    else:
+        return np.sqrt(np.nanmean(squared_error))
+
+
+def mean_absolute_error(actual, predicted):
+    """
+    Calculates the mean absolute error between actual and predicted values.
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+
+    Returns:
+        np.array: The mean absolute error.
+    """
+    abs_error = np.abs(simple_error(actual, predicted))
+    return np.nanmean(abs_error)
+
+
+def simple_error(actual, predicted, *args, **kwargs):
+    """
+    Calculates the simple error between actual and predicted values.
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+
+    Returns:
+        np.array: The simple error.
+
+    """
+    # Simple difference
+    return actual - predicted
+
+
+def bias(actual, predicted, *args, **kwargs):
+    """
+    Calculates the bias between actual and predicted values.
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+
+    Returns:
+        np.array: The bias.
+
+    """
+    return np.nanmean(simple_error(actual, predicted, *args, **kwargs))
+
+
+def scaled_error(actual, predicted, naive_mse=None, train=None, lag=1, *args, **kwargs):
+    """
+    Calculates the scaled error between actual and predicted values.
+    Scaling is done by dividing the error with the naive mse.
+    Either the naive mse or the training data must be provided.
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+        naive_mse (float): The naive mse. Default: None.
+        train (pd.DataFrame): The training data. Default: None.
+        lag (int): The lag to use for the naive forecast. Default: 1.
+
+    Returns:
+        np.array: The scaled error.
+    """
+
+    # Scaling the error with the naive mse
+
+    error = simple_error(actual, predicted, **kwargs)
+    if naive_mse is not None:
+        denom = naive_mse
+    elif len(train) > 0:
+        # Getting the naive predictions
+        y_naive = naive_forecasts(train, lag)
+        # And the mse
+        denom = mse(train[lag:], y_naive)
+    else:
+        raise ValueError("Provide in-sample mse or the training data ")
+    return np.nanmean(error) / denom
+
+
+def percentage_error(actual, predicted, *args, **kwargs):
+    """
+    Calculates the percentage error between actual and predicted values.
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+
+    Returns:
+        np.array: The percentage error.
+    """
+
+    # % Error
+    # in case the actual is zero return zero
+    # error = simple_error(actual, predicted, **kwargs)/actual if actual != 0 else 0
+
+    error = [simple_error(y, y_hat, **kwargs) / y if y != 0 else np.nan for y, y_hat in zip(actual, predicted)]
+
+    return error
+
+
+def naive_forecasts(actual, lag=1):
+    """
+    Calculates the naive forecasts for a given lag.
+
+    Args:
+        actual (np.array): The actual values.
+        lag (int): The lag to use for the naive forecast. Default: 1.
+
+    Returns:
+        np.array: The naive forecasts.
+    """
+
+    # Just repeats previous samples
+    return actual[:-lag]
+
+
+def mse(actual, predicted, *args, **kwargs):
+    """
+    Calculates the mean squared error between actual and predicted values.
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+
+    Returns:
+        np.array: The mean squared error.
+
+    """
+
+    # The mse
+    return mean_squared_error(actual, predicted)
+
+
+def rmse(actual, predicted, *args, **kwargs):
+    """
+    Calculates the root mean squared error between actual and predicted values.
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+
+    Returns:
+        np.array: The root mean squared error.
+    """
+
+    # for rmse just turn squared to false
+    return mean_squared_error(actual, predicted, squared=False)
+
+
+def mae(actual, predicted, *args, **kwargs):
+    """
+    Calculates the mean absolute error between actual and predicted values.
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+
+    Returns:
+        np.array: The mean absolute error.
+    """
+    return mean_absolute_error(actual, predicted)
+
+
+def mape(actual, predicted, *args, **kwargs):
+    """
+    Calculates the mean absolute percentage error between actual and predicted values.
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+
+    Returns:
+        np.array: The mean absolute percentage error.
+
+    """
+
+    # !!!!!!!Careful!!!!!!
+    # MAPE is biased as it is not symmetric
+    # MAPE is not defined for actual = 0
+    error = np.abs(percentage_error(actual, predicted))
+    return np.nanmean(error)
+
+
+def smape(actual, predicted, *args, **kwargs):
+    """
+    Calculates the symmetric mean absolute percentage error between actual and predicted values.
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+
+    Returns:
+        np.array: The symmetric mean absolute percentage error.
+    """
+    # Symmetric mape
+    error = 2.0 * np.abs(actual - predicted) / ((np.abs(actual) + np.abs(predicted)) + e)
+    return np.nanmean(error)
+
+
+def wmape(actual, predicted, *args, **kwargs):
+    """
+    Calculates the weighted mean absolute percentage error between actual and predicted values.
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+
+    Returns:
+        np.array: The weighted mean absolute percentage error.
+    """
+    # Weighted mape
+    error = np.abs(actual - predicted)
+    weights = np.abs(actual)
+    return np.nanmean(error / weights)
+
+
+def mase(actual, predicted, naive_mae, train=None, lag=1, *args, **kwargs):
+    """
+    Calculates the mean absolute scaled error between actual and predicted values.
+    As proposed by "Another look at measures of forecast accuracy", Rob J Hyndman
+
+    Either training data or the naive_mae should be given.
+    If training data is given computes the naive_mae internally
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+        naive_mae (float): The mean absolute error of the naive forecast, used for scaling.
+        train (np.array): The training data. Default: None.
+        lag (int): The lag to use for the naive forecast. Default: 1.
+
+    Returns:
+        np.array: The mean absolute scaled error.
+
+    """
+    # Getting the MAE of the in-sample naive forecast
+    if naive_mae is not None:
+        scale_denom = naive_mae
+    elif train is not None:
+        scale_denom = mae(train[lag:], naive_forecasts(train, lag))
+    else:
+        raise ValueError("Provide in-sample mae or the training data ")
+    # Getting the mae
+    num = mae(actual, predicted)
+    return num / scale_denom
+
+
+def rmsse(actual, predicted, naive_mse=None, train=None, lag=1, *args, **kwargs):
+    """
+    Calculates the root mean squared scaled error between actual and predicted values.
+    The variant of MASE used as a metric in M5.
+
+    Either training data or the naive_mse should be given.
+    If training data is given computes the naive_mse internally
+
+    Reference:
+        https://github.com/alan-turing-institute/sktime/blob/main/sktime/performance_metrics/forecasting/_functions.py
+
+    Args:
+        actual (np.array): The actual values.
+        predicted (np.array): The predicted values.
+        naive_mse (float): The mean squared error of the naive forecast, used for scaling.
+        train (np.array): The training data. Default: None.
+        lag (int): The lag to use for the naive forecast. Default: 1.
+
+    Returns:
+        np.array: The root mean squared scaled error.
+    """
+
+    # It is unweighted, I can also weight it!
+    num = mse(actual, predicted)
+    if naive_mse is not None:
+        denom = naive_mse
+    elif len(train) > 0:
+        # Getting the naive predictions
+        y_naive = naive_forecasts(train, lag)
+        # And the mse
+        denom = mse(train[lag:], y_naive)
+    else:
+        raise ValueError("Provide in-sample mse or the training data ")
+    # error = np.sqrt(num / np.maximum(denom, e))
+    error = np.sqrt(num / denom) if denom != 0 else 0
+    return error

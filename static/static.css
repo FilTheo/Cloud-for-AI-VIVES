@@ -1,0 +1,537 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f0f0;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    padding-left: 170px;
+    /* Reduced from 180px to give more space for the content */
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+}
+
+.table-slider {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto 20px;
+    overflow-x: hidden;
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+table {
+    width: 100%;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    font-size: 11px;
+}
+
+thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #f2f2f2;
+}
+
+th,
+td {
+    border: 1px solid #ddd;
+    padding: 4px 3px;
+    text-align: center;
+    width: auto;
+    /* Allow columns to size based on content */
+}
+
+th.model-header,
+th:not(.model-header):not(:first-child) {
+    width: 50px;
+    /* Reduced from 60px to fit the new column */
+}
+
+td.order-cell {
+    padding: 2px;
+    width: 60px;
+    /* Match the width of other data columns */
+}
+
+input[type="number"] {
+    width: 90%;
+    /* Increased from 75% to fill the cell better */
+    padding: 1px;
+    border: 1px solid #ddd;
+    border-radius: 2px;
+    text-align: center;
+    font-size: 10px;
+    /* Reduced from 11px */
+}
+
+/* Remove or comment out these styles if they exist */
+/*
+tbody tr:nth-child(even) {
+    background-color: #f8f8f8;
+}
+
+tbody tr:hover {
+    background-color: #e8e8e8;
+}
+*/
+
+/* Update the row color styles */
+.green-row {
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+.yellow-row {
+    background-color: rgba(255, 255, 0, 0.1);
+}
+
+.red-row {
+    background-color: rgba(255, 0, 0, 0.1);
+}
+
+/* Add hover effects */
+.green-row:hover {
+    background-color: rgba(0, 255, 0, 0.2);
+}
+
+.yellow-row:hover {
+    background-color: rgba(255, 255, 0, 0.2);
+}
+
+.red-row:hover {
+    background-color: rgba(255, 0, 0, 0.2);
+}
+
+.plots-container {
+    margin-top: 20px;
+    width: 100%;
+    overflow-x: hidden;
+}
+
+.tabs {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.tab-button {
+    padding: 10px 20px;
+    border: none;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin: 5px;
+}
+
+.tab-button:hover {
+    background-color: #e0e0e0;
+}
+
+.tab-button.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.plot-display {
+    width: 100%;
+    overflow-x: hidden;
+}
+
+.plot {
+    display: none;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+}
+
+.upload-container {
+    position: fixed;
+    left: 5px;
+    /* Moved from 10px to 5px */
+    top: 80px;
+    z-index: 1000;
+    width: 140px;
+    /* Reduced from 150px */
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.upload-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Center the buttons within the container */
+}
+
+.file-input {
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
+}
+
+.file-label,
+.upload-button,
+.forecast-button,
+.download-button,
+.update-data-button {
+    font-size: 11px;
+    /* Reduced from 12px */
+    font-weight: bold;
+    color: white;
+    display: inline-block;
+    padding: 8px 5px;
+    /* Reduced horizontal padding */
+    cursor: pointer;
+    border-radius: 4px;
+    text-align: center;
+    width: 120px;
+    /* Reduced from 130px */
+    margin-bottom: 8px;
+    border: none;
+    transition: background-color 0.3s ease;
+    height: 34px;
+    line-height: 18px;
+    box-sizing: border-box;
+}
+
+/* Ensure the text doesn't wrap in the buttons */
+.file-label,
+.forecast-button,
+.download-button,
+.update-data-button {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-label {
+    background-color: #007bff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.upload-button {
+    background-color: #28a745;
+}
+
+.forecast-button {
+    background-color: #17a2b8;
+}
+
+.download-button {
+    background-color: #ffc107;
+}
+
+.update-data-button {
+    background-color: #ffa500;
+}
+
+.file-label:hover {
+    background-color: #0056b3;
+}
+
+.upload-button:hover {
+    background-color: #218838;
+}
+
+.forecast-button:hover {
+    background-color: #138496;
+}
+
+.download-button:hover {
+    background-color: #e0a800;
+}
+
+.optimize-button {
+    background-color: #6c757d;
+}
+
+.optimize-button:hover {
+    background-color: #5a6268;
+}
+
+.popup {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.popup-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+}
+
+/* Add these styles to your existing CSS file */
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+
+.loading-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 10px auto;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.no-predictions {
+    text-align: center;
+    font-size: 18px;
+    color: #666;
+    margin-top: 50px;
+}
+
+.no-plots {
+    text-align: center;
+    font-size: 18px;
+    color: #666;
+    margin-top: 50px;
+}
+
+.header-container {
+    display: flex;
+    justify-content: flex-end;
+    padding: 10px 0;
+}
+
+.client-info {
+    display: flex;
+    align-items: center;
+}
+
+.client-info span {
+    margin-right: 10px;
+}
+
+.logout-button {
+    padding: 5px 10px;
+    background-color: #f44336;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.logout-button:hover {
+    background-color: #d32f2f;
+}
+
+.update-data-button {
+    background-color: #ffa500;
+}
+
+.update-data-button:hover {
+    background-color: #ff8c00;
+}
+
+/* Update these styles in your existing CSS file */
+.table-slider {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto 20px;
+    overflow-x: hidden;
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+table {
+    width: 100%;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    font-size: 11px;
+}
+
+th,
+td {
+    border: 1px solid #ddd;
+    padding: 4px 3px;
+    text-align: center;
+    width: auto;
+}
+
+th.model-header,
+th:not(.model-header):not(:first-child) {
+    width: 50px;
+    /* Reduced from 60px to fit the new column */
+}
+
+/* Style for the True column header */
+th.model-header:nth-child(4n+4) {
+    background-color: #e6e6e6;
+}
+
+/* Style for the True column cells */
+td:nth-child(4n+4) {
+    background-color: #f0f0f0;
+}
+
+/* Update row color styles */
+.green-row td:nth-child(4n+1),
+.green-row td:nth-child(4n+2),
+.green-row td:nth-child(4n+3) {
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+.yellow-row td:nth-child(4n+1),
+.yellow-row td:nth-child(4n+2),
+.yellow-row td:nth-child(4n+3) {
+    background-color: rgba(255, 255, 0, 0.1);
+}
+
+.red-row td:nth-child(4n+1),
+.red-row td:nth-child(4n+2),
+.red-row td:nth-child(4n+3) {
+    background-color: rgba(255, 0, 0, 0.1);
+}
+
+/* Add hover effects */
+.green-row:hover td:nth-child(4n+1),
+.green-row:hover td:nth-child(4n+2),
+.green-row:hover td:nth-child(4n+3) {
+    background-color: rgba(0, 255, 0, 0.2);
+}
+
+.yellow-row:hover td:nth-child(4n+1),
+.yellow-row:hover td:nth-child(4n+2),
+.yellow-row:hover td:nth-child(4n+3) {
+    background-color: rgba(255, 255, 0, 0.2);
+}
+
+.red-row:hover td:nth-child(4n+1),
+.red-row:hover td:nth-child(4n+2),
+.red-row:hover td:nth-child(4n+3) {
+    background-color: rgba(255, 0, 0, 0.2);
+}
+
+/* Style for the True column on hover */
+tr:hover td:nth-child(4n+4) {
+    background-color: #e6e6e6;
+}
+
+/* Ensure Unique ID column is not colored */
+td:first-child {
+    background-color: white !important;
+}
+
+/* Style for all data columns */
+td:not(:first-child) {
+    background-color: #f0f0f0;
+}
+
+/* Update row color styles */
+.green-row td:not(:first-child) {
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+.yellow-row td:not(:first-child) {
+    background-color: rgba(255, 255, 0, 0.1);
+}
+
+.red-row td:not(:first-child) {
+    background-color: rgba(255, 0, 0, 0.1);
+}
+
+/* Add hover effects */
+.green-row:hover td:not(:first-child) {
+    background-color: rgba(0, 255, 0, 0.2);
+}
+
+.yellow-row:hover td:not(:first-child) {
+    background-color: rgba(255, 255, 0, 0.2);
+}
+
+.red-row:hover td:not(:first-child) {
+    background-color: rgba(255, 0, 0, 0.2);
+}
+
+/* Style for the True column on hover */
+tr:hover td:nth-child(4n+4) {
+    background-color: #e6e6e6;
+}
+
+/* Ensure Unique ID column is not colored */
+td:first-child {
+    background-color: white !important;
+}
+
+/* Style for confirmed date cells */
+td.confirmed-date {
+    color: red;
+    font-weight: bold;
+}
+
+/* Ensure all buttons have the same height */
+.file-label,
+.forecast-button,
+.download-button,
+.update-data-button {
+    height: 34px;
+    /* Set a fixed height for all buttons */
+    line-height: 18px;
+    /* Center text vertically */
+    box-sizing: border-box;
+    /* Include padding in the height */
+}
