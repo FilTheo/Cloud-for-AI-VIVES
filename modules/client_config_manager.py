@@ -36,7 +36,10 @@ class ConfigManager:
         """
         try:
             # Dynamically import client-specific configuration module
-            config_module = importlib.import_module(f'modules.utils.configurations.{self.client_folder}')
+            if 'm5' in self.client_folder:
+                config_module = importlib.import_module('modules.utils.configurations.m5')
+            else:
+                config_module = importlib.import_module(f'modules.utils.configurations.{self.client_folder}')
             
             # Extract relevant configurations from the imported module
             client_config = {
