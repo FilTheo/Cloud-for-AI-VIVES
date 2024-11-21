@@ -10,13 +10,14 @@ import plotly.io as pio
 
 logger = setup_logger(__name__, "plots.log")
 
-def make_plots(evaluation_df, config_manager):
+def make_plots(evaluation_df, config_manager, full_data):
     """
     Generate interactive Plotly plots based on evaluation data and save as HTML.
 
     Args:
         evaluation_df (pd.DataFrame): DataFrame containing evaluation metrics.
         config_manager (ConfigManager): The configuration manager object.
+        full_data (pd.DataFrame, optional): Full dataset for additional plots.
 
     Returns:
         dict: Dictionary of plot names and their HTML representations.
@@ -43,6 +44,10 @@ def make_plots(evaluation_df, config_manager):
         fig4 = plot_confirmed_vs_true(evaluation_df)
         if fig4 is not None:
             plot_data['Confirmed MAE'] = pio.to_html(fig4, full_html=False)
+
+        
+        fig5 = plot_seasonal_pattern(full_data)
+        plot_data['Seasonal Pattern'] = pio.to_html(fig5, full_html=False)
 
         # Save plots to S3
         s3_config = config_manager.get_s3_config()
@@ -290,4 +295,78 @@ def plot_confirmed_vs_true(eval_df):
         xaxis_tickangle=-45
     )
 
+    return fig
+
+
+def plot_seasonal_pattern(full_data):
+    """
+    Create an interactive seasonal pattern plot showing daily sales across recent weeks.
+    
+    Args:
+        full_data (pd.DataFrame): The full dataset containing date and sales data
+        
+    Returns:
+        go.Figure: Plotly figure object containing the seasonal pattern plot
+    """
+
+    # Get last 4 weeks of data
+    last_date = full_data['date'].max()
+    last_monday = last_date - pd.Timedelta(days=last_date.weekday())
+    four_weeks_ago = last_monday - pd.Timedelta(weeks=3)
+    full_data = full_data[full_data['date'] >= four_weeks_ago]
+    
+    # Add day name and week information
+    full_data['day_name'] = full_data['date'].dt.day_name()
+    last_week = full_data['date'].dt.isocalendar().week.max()
+    full_data['Week'] = full_data['date'].dt.isocalendar().week.apply(lambda x: last_week - x + 1)
+    
+    # Map week numbers to descriptive names
+    week_names = {
+        1: 'Current Week',
+        2: 'Last Week', 
+        3: 'Two Weeks Ago',
+        4: 'Three Weeks Ago'
+    }
+    
+    # Calculate daily sums
+    temp_sums = full_data.groupby(['Week', 'day_name'])['y'].sum().reset_index()
+    temp_sums['Week'] = temp_sums['Week'].map(week_names)
+    
+    # Create the interactive plot
+    fig = go.Figure()
+    
+    # Add bars for each week
+    for week in week_names.values():
+        week_data = temp_sums[temp_sums['Week'] == week]
+        fig.add_trace(go.Bar(
+            name=week,
+            x=week_data['day_name'],
+            y=week_data['y'],
+            hovertemplate='Day: %{x}<br>' +
+                         'Sales: %{y:,.0f}<br>' +
+                         'Week: ' + week
+        ))
+    
+    # Update layout
+    fig.update_layout(
+        title='Total Daily Sales Comparison Across Last 4 Weeks',
+        xaxis_title='Day of Week',
+        yaxis_title='Total Sales Volume',
+        barmode='group',
+        plot_bgcolor='rgb(237, 237, 237)',
+        width=1200,
+        height=600,
+        showlegend=True,
+        legend=dict(
+            title='Week',
+            yanchor="top",
+            y=0.99,
+            xanchor="right",
+            x=1.15
+        )
+    )
+    
+    # Add gridlines
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='white')
+    
     return fig
