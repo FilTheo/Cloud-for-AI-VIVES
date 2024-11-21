@@ -134,30 +134,36 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        // Show the first plot by default
+        window.onload = function () {
             const firstPlot = document.querySelector('.plot');
-            const firstTab = document.querySelector('.tab-button');
-            if (firstPlot && firstTab) {
+            if (firstPlot) {
                 firstPlot.style.display = 'block';
-                firstTab.classList.add('active');
+                const firstButton = document.querySelector('.tab-button');
+                if (firstButton) {
+                    firstButton.classList.add('active');
+                }
             }
-        });
+        };
 
-        function showPlot(plotId) {
-            const plots = document.querySelectorAll('.plot');
-            plots.forEach(function (plot) {
+        function showPlot(plotName) {
+            // Hide all plots
+            const plots = document.getElementsByClassName('plot');
+            for (let plot of plots) {
                 plot.style.display = 'none';
-            });
-            document.getElementById(plotId).style.display = 'block';
+            }
 
-            const tabs = document.querySelectorAll('.tab-button');
-            tabs.forEach(function (tab) {
-                tab.classList.remove('active');
-            });
-            event.currentTarget.classList.add('active');
+            // Show selected plot
+            document.getElementById(plotName).style.display = 'block';
 
-            // Trigger a window resize event to make sure the plot is properly rendered
-            window.dispatchEvent(new Event('resize'));
+            // Update active tab button
+            const buttons = document.getElementsByClassName('tab-button');
+            for (let button of buttons) {
+                button.classList.remove('active');
+                if (button.innerText === plotName) {
+                    button.classList.add('active');
+                }
+            }
         }
 
         function showOptimizePopup() {
