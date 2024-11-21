@@ -347,7 +347,7 @@ def run_prediction(full_data, config_manager):
     predictions = forecaster.predict()
     
     # Post processes
-    predictions = postprocess_predictions(predictions,  ensemble = True)
+    predictions = postprocess_predictions(predictions,  ensemble = model_config["ensemble"] )
     
     logger.info(f"Memory usage after prediction: {psutil.virtual_memory().percent}%")
     logger.info("Prediction process completed")
@@ -377,15 +377,15 @@ def run_evaluation(full_data, predictions, config_manager, latest_evaluation_fil
 
     eval = ForecastEvaluator(freq="D", original_df=full_data)
     # Fit
-    eval.fit(complete_evaluation_df =predictions,  evaluation_cv=True)
+    eval.fit(complete_evaluation_df=predictions, evaluation_cv=True)
     # Predict
     evaluation_config = config_manager.get_config("DEMO_EVALUATION_CONFIGURATIONS")
     eval_df = eval.predict(metrics=evaluation_config["metrics"])
     # Update the evaluations
     full_evaluation_df = update_evaluations(config_manager, eval_df, latest_evaluation_file)
     if full_evaluation_df is not None:
-        # Generate and upload plots
-        plot_filenames = make_plots(full_evaluation_df, config_manager)
+        # Generate and upload plots - now passing full_data
+        plot_filenames = make_plots(full_evaluation_df, config_manager, full_data=full_data)
         logger.info(f"Generated plot filenames:")
     else:
         logger.warning("No evaluation data available for plotting")
@@ -430,7 +430,7 @@ def update_evaluations(config_manager, new_eval_df, latest_evaluation_file):
 
         # Step 3: Get the max date from the new evaluation data for the new filename
         new_eval_df['date'] = pd.to_datetime(new_eval_df['date'])
-        max_date = new_eval_df['date'].max().strftime('%d%m%y')
+        max_date = new_eval_df['date'].max().strftime('%d%m%Y')
 
         # Step 4: Save the combined evaluation data to S3
         csv_buffer = io.StringIO()
@@ -538,7 +538,8 @@ def set_extra_days_zeros(df, extra_days_path):
 
 
 
-def get_ensemble_predictions(predictions, ensemble=True, double_step = True):
+def get_ensemble_predictions(predictions, ensemble=False, double_step = False):
+    
     cols = ['unique_id', 'date', 'fh']
     def custom_agg(x, min_ratio = 2, medium_ratio = 5, max_ratio = 7):
             non_zero = x[x != 0]
@@ -572,11 +573,9 @@ def get_ensemble_predictions(predictions, ensemble=True, double_step = True):
             predictions = pd.concat([predictions, benchmark_predictions], ignore_index=True)
             
     if ensemble:
-        
-
         ensemble_preds = predictions.groupby(cols).agg({'y': custom_agg}).reset_index()
     else:
-        ensemble_preds = predictions.copy()
+        ensemble_preds = predictions[predictions['Model'] == 'lgbm']
 
     ensemble_preds['Model'] = 'SeasonXpert'
 
@@ -690,7 +689,7 @@ def concat_with_true_values(predictions, newest_data):
     return cleaned_merged
 
 
-def postprocess_predictions(predictions, ensemble = False, double_step = True):
+def postprocess_predictions(predictions, ensemble = False, double_step = False):
     # set the extra days to zero
     #predictions = set_extra_days_zeros(predictions, wednesdays_off_path)
 
