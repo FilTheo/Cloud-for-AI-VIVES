@@ -4,11 +4,14 @@ import os
 from werkzeug.utils import secure_filename
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
-from modules.utils.aws_config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+#from modules.utils.aws_config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 from io import StringIO
 from datetime import datetime
 from modules.data_preprocessor import DataPreprocessor
 import io
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Set up logger
 logger = setup_logger(__name__, 'data_extractor.log')
@@ -56,8 +59,8 @@ class Extractor:
             self.bucket_name = bucket_name
             self.s3_client = boto3.client(
                 "s3",
-                aws_access_key_id=AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
             )
             self.bucket_path = bucket_path
 
@@ -176,7 +179,7 @@ class Extractor:
                 else:
                     raise ValueError(f"Unsupported file type: {file_extension}")
 
-                if self.client_name != 'm5':
+                if 'm5' not in self.client_name:
                     dp = DataPreprocessor(data)
                     data = dp.preprocess_new_data(client_name="client_1", new_file=True)
                     logger.info(f"New data extracted successfully from {full_path}")
@@ -363,8 +366,8 @@ def handle_file_upload(file, bucket_name, bucket_path):
         try:
             s3_client = boto3.client(
                 's3',
-                aws_access_key_id=AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
             )
             
             full_path = f"{bucket_path}/{filename}"
