@@ -18,7 +18,6 @@ import os
 from modules.data_extractor import handle_file_upload
 from modules.client_config_manager import ConfigManager
 from modules.utils.configurations.m5 import DEMO_AWS_LOAD_CONFIGURATIONS
-from modules.utils.aws_config import FLASK_SECRET_KEY, BUCKET_NAME
 import pandas as pd
 import io
 from modules.pipeline import run_pipeline, get_latest_files
@@ -26,6 +25,9 @@ from modules.utils.user_configurations import PASSWORDS
 from tenacity import retry, stop_after_attempt, wait_exponential
 import boto3
 from modules.data_extractor import Extractor
+from dotenv import load_dotenv
+
+load_dotenv()
 
 GENERAL_PASSWORD = "vives_tetra_product"
 
@@ -61,7 +63,7 @@ def test_aws_credentials():
 test_aws_credentials()
 
 app = Flask(__name__)
-app.secret_key = FLASK_SECRET_KEY
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
 # Initialize ConfigManager as None
 config_manager = None
@@ -103,7 +105,7 @@ def logout():
 @login_required
 def index():
     client = session['client']
-    config_manager = ConfigManager(BUCKET_NAME, client)
+    config_manager = ConfigManager(os.getenv("BUCKET_NAME"), client)
     s3_config = config_manager.get_s3_config()
     
     # Load predictions
@@ -189,7 +191,7 @@ def upload_file():
                 }
             )
 
-        config_manager = ConfigManager(BUCKET_NAME, session['client'])
+        config_manager = ConfigManager(os.getenv("BUCKET_NAME"), session['client'])
         s3_config = config_manager.get_s3_config()
         success = handle_file_upload(file, s3_config['bucket_name'], s3_config['data_path'])
         if success:
@@ -205,7 +207,7 @@ def upload_file():
 def run_forecast():
     logger.info("Running forecast")
     try:
-        config_manager = ConfigManager(BUCKET_NAME, session['client'])
+        config_manager = ConfigManager(os.getenv("BUCKET_NAME"), session['client'])
         run_pipeline(config_manager)
         logger.info("New forecasts generated successfully")
         return jsonify({'success': True, 'message': "New forecasts generated successfully!"})
@@ -221,7 +223,7 @@ def run_forecast():
 def download_orders():
     logger.info("Downloading orders")
     
-    config_manager = ConfigManager(BUCKET_NAME, session['client'])
+    config_manager = ConfigManager(os.getenv("BUCKET_NAME"), session['client'])
     s3_config = config_manager.get_s3_config()
     s3 = boto3.client('s3')
     
@@ -332,7 +334,7 @@ def run_pipeline_with_retry(config_manager):
 def update_data():
     logger.info("Updating data")
     try:
-        config_manager = ConfigManager(BUCKET_NAME, session['client'])
+        config_manager = ConfigManager(os.getenv("BUCKET_NAME"), session['client'])
         s3_config = config_manager.get_s3_config()
         
         # Get the latest files
