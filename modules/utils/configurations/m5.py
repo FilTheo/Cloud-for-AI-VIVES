@@ -7,7 +7,7 @@ import numpy as np
 import json
 import boto3
 from botocore.exceptions import ClientError
-
+from mlforecast.target_transforms import LocalStandardScaler
 # Initial configurations
 # Initial configurations
 DEMO_FORECAST_CONFIGURATIONS = {"h": 7, 
@@ -24,14 +24,15 @@ DEMO_FORECAST_CONFIGURATIONS = {"h": 7,
                                 }
 DEMO_MODEL_CONFIGURATIONS = {
     "model": "lgbm",
-    "lags": 7,
-    "loss": "mse",
-    #"seasonal_features":["day_of_week", 'day'],
+    "lags": 21,
+    "loss": "fair",
+    "seasonal_features":['dayofweek', 'month', 'day'],
     #"seasonal_features":["day_of_week"],
     #"lag_transforms":lag_transformation,
-    #"transformations":[LocalStandardScaler()],
-    "benchmark_models": ["SNaive", "SeasonalWindowAverage"],
+    "transformations":[LocalStandardScaler()],
+    "benchmark_models": ["SNaive"],
     "fit_benchmarks": True,
+    "ensemble": False,
     #"params": params,
         #{"n_estimators":900,
             #"learning_rate" : 0.114,
